@@ -4,8 +4,16 @@
   "description": "MetricFlow is a demo project that showcases resilient, observable workflows using Temporal, Prometheus, and Kubernetes. It fetches, transforms, and saves data with automatic retries on failure, while exposing Prometheus metrics for executions, successes, failures, and retries.",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsc",
+    "start": "ts-node src/index.ts",
+    "dev": "ts-node src/index.ts"
   },
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "devDependencies": {
+    "@types/node": "^24.5.2",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.2"
+  }
 }
