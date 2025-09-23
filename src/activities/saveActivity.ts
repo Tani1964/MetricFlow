@@ -6,7 +6,10 @@ export const saveActivity = (input: FetchResult) => {
   try {
     const key = `item:${Date.now()}`;
     store.set(key, input.value);
-    // localStora.setItem("storeDB", JSON.stringify(Object.fromEntries(store)));
+    setTimeout(() => {
+      console.log("Simulating async save operation...");
+    }, 3000);
+    // localStorage.setItem("storeDB", JSON.stringify(Object.fromEntries(store)));
   } catch (error) {
     console.log("Error saving data...");
     throw error;
