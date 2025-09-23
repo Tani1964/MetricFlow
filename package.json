@@ -4,17 +4,27 @@
   "description": "MetricFlow is a demo project that showcases resilient, observable workflows using Temporal, Prometheus, and Kubernetes. It fetches, transforms, and saves data with automatic retries on failure, while exposing Prometheus metrics for executions, successes, failures, and retries.",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
     "build": "tsc",
-    "start": "ts-node src/index.ts",
+    "clean": "rm -rf dist",
     "dev": "ts-node src/index.ts",
-    "start:workflow": "ts-node src/startWorkflow.ts"
+    "dev:worker": "ts-node src/worker.ts",
+    "dev:client": "ts-node src/client.ts",
+    "start": "node dist/server.js",
+    "start:server": "node dist/index.js",
+    "start:worker": "node dist/worker.js",
+    "start:client": "node dist/client.js",
+    "docker:build": "docker build -t temporal-workflow:latest .",
+    "docker:run": "docker-compose up",
+    "docker:down": "docker-compose down",
+    "k8s:deploy": "kubectl apply -f k8s/",
+    "k8s:delete": "kubectl delete -f k8s/"
   },
   "author": "",
   "license": "ISC",
   "devDependencies": {
     "@types/express": "^5.0.3",
     "@types/node": "^24.5.2",
+    "@types/cors": "^2.8.17",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.2"
   },
@@ -22,7 +32,14 @@
     "@temporalio/client": "^1.13.0",
     "@temporalio/worker": "^1.13.0",
     "@temporalio/workflow": "^1.13.0",
+    "@temporalio/activity": "^1.8.6",
     "axios": "^1.12.2",
-    "express": "^5.1.0"
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "prom-client": "^15.1.3"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
   }
 }

@@ -1,37 +1,25 @@
-FROM node:20
+FROM node:18-alpine
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    python3 \
-    make \
-    g++ \
-    curl \
-    bash \
-    && rm -rf /var/lib/apt/lists/*
-
-# Install Temporal CLI
-RUN curl -sSfL https://temporal.download/cli.sh | bash \
-    && mv /root/.temporalio/bin/temporal /usr/local/bin/temporal \
-    && chmod +x /usr/local/bin/temporal
-
-# Verify installation
-RUN temporal --version
-
-# Install TypeScript & ts-node globally
-RUN npm install -g typescript ts-node
+# Install pnpm
+RUN corepack enable pnpm
 
 WORKDIR /app
 
 # Copy package files
-COPY package*.json ./
-COPY tsconfig.json ./
+COPY package.json pnpm-lock.yaml ./
 
-# Install dependencies
-RUN npm install
+# Install all dependencies
+RUN pnpm install --frozen-lockfile
 
 # Copy source code
-COPY src ./src
+COPY . .
+
+# Build the application
+RUN pnpm build
+
+# Remove dev dependencies after build
+RUN pnpm prune --prod
 
 EXPOSE 3000
 
-CMD ["npm", "run", "dev"]
+CMD ["pnpm", "start:worker"]

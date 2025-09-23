@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: temporal-server
+  namespace: temporal-workflow
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: temporal-server
+  template:
+    metadata:
+      labels:
+        app: temporal-server
+    spec:
+      containers:
+      - name: temporal-server
+        image: temporalio/auto-setup:1.22.0
+        ports:
+        - containerPort: 7233
+        - containerPort: 8233
+        env:
+        - name: DB
+          value: "default"
+        - name: DYNAMIC_CONFIG_FILE_PATH
+          value: "config/dynamicconfig/development-sql.yaml"
+        resources:
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: temporal-server
+  namespace: temporal-workflow
+spec:
+  selector:
+    app: temporal-server
+  ports:
+  - name: grpc
+    port: 7233
+    targetPort: 7233
+  - name: http
+    port: 8233
+    targetPort: 8233

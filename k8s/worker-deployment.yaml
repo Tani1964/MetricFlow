@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: temporal-worker
+  namespace: temporal-workflow
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: temporal-worker
+  template:
+    metadata:
+      labels:
+        app: temporal-worker
+    spec:
+      containers:
+      - name: worker
+        image: temporal-workflow:latest
+        command: ["npm", "start:worker"]
+        env:
+        - name: TEMPORAL_ADDRESS
+          value: "temporal-server:7233"
+        - name: TEMPORAL_NAMESPACE
+          value: "default"
+        resources:
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+        livenessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -c
+            - "ps aux | grep -v grep | grep worker"
+          initialDelaySeconds: 30
+          periodSeconds: 10

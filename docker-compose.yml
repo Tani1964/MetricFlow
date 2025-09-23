@@ -2,40 +2,49 @@ version: '3.8'
 
 services:
   temporal:
-    image: temporalio/auto-setup:latest
+    image: temporalio/auto-setup:1.22.0
     ports:
       - "7233:7233"
+      - "8233:8233"
     environment:
-      - DB=postgres12
-      - DB_PORT=5432
-      - POSTGRES_USER=temporal
-      - POSTGRES_PWD=temporal
-      - POSTGRES_SEEDS=postgresql
-    depends_on:
-      - postgresql
+      - DB=default
+      - DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development-sql.yaml
+    volumes:
+      - temporal-data:/etc/temporal/config/dynamicconfig
 
-  postgresql:
-    image: postgres:13
-    environment:
-      POSTGRES_PASSWORD: temporal
-      POSTGRES_USER: temporal
-      POSTGRES_DB: temporal
-
-  app:
-    build: .
+  temporal-ui:
+    image: temporalio/ui:2.21.3
     ports:
-      - "3000:3000"
-    depends_on:
-      - temporal
+      - "8080:8080"
     environment:
       - TEMPORAL_ADDRESS=temporal:7233
-
-  temporal-web:
-    image: temporalio/web:latest
-    ports:
-      - "8233:8080"
-    environment:
-      - TEMPORAL_GRPC_ENDPOINT=temporal:7233
-      - TEMPORAL_WEB_PORT=8080
     depends_on:
       - temporal
+
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana-storage:/var/lib/grafana
+      - ./grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./grafana/datasources:/etc/grafana/provisioning/datasources
+
+volumes:
+  temporal-data:
+  grafana-storage:
