@@ -68,5 +68,4 @@ export const dataStorageOperations = new Counter({
   labelNames: ['operation', 'status'],
 });
 
-// Export the registry
 export { register };

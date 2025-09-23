@@ -1,7 +1,6 @@
 import { Client, Connection } from "@temporalio/client";
 import express from "express";
 
-// Import metrics with error handling
 interface MetricCounter {
   inc: (labels?: Record<string, string>) => void;
   dec: (labels?: Record<string, string>) => void;
@@ -20,7 +19,6 @@ try {
   console.log("Metrics imported successfully");
 } catch (error) {
   console.error("Failed to import metrics:", error);
-  // Create dummy metrics to prevent crashes
   workflowExecutions = { inc: () => {}, dec: () => {} };
   workflowDuration = { observe: () => {} };
   activeWorkflows = { inc: () => {}, dec: () => {} };
@@ -29,7 +27,7 @@ try {
 const app = express();
 app.use(express.json());
 
-// Add request logging middleware
+
 app.use((req, res, next) => {
   console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
   next();
@@ -106,7 +104,6 @@ async function startWorkflow() {
     console.error("Error in startWorkflow:", error);
     console.error("Error stack:", error);
     
-    // Make sure we clean up metrics on error
     try {
       activeWorkflows.dec({ workflow_type: 'fetchTransformSaveWorkflow' });
     } catch (metricsError) {
@@ -129,7 +126,6 @@ async function startWorkflow() {
 
 async function main() {
   try {
-    // Test Temporal connection on startup
     temporalAvailable = await testTemporalConnection();
     console.log(`Temporal connection: ${temporalAvailable ? "available" : "unavailable"}`);
 
