@@ -16,7 +16,8 @@ spec:
       containers:
       - name: api-server
         image: temporal-workflow:latest
-        command: ["npm", "start:server"]
+        imagePullPolicy: Never  # Add this line
+        command: ["npm", "run", "start:server"]
         ports:
         - containerPort: 3000
         env:

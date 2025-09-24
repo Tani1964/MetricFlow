@@ -16,7 +16,7 @@ spec:
       containers:
       - name: worker
         image: temporal-workflow:latest
-        command: ["npm", "start:worker"]
+        command: ["npm","run", "start:worker"]
         env:
         - name: TEMPORAL_ADDRESS
           value: "temporal-server:7233"

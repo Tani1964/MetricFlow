@@ -1,25 +1,17 @@
-FROM node:18-alpine
-
-# Install pnpm
-RUN corepack enable pnpm
+FROM node:18
 
 WORKDIR /app
 
-# Copy package files
-COPY package.json pnpm-lock.yaml ./
+COPY package.json package-lock.json ./
 
-# Install all dependencies
-RUN pnpm install --frozen-lockfile
+RUN npm ci
 
-# Copy source code
 COPY . .
 
-# Build the application
-RUN pnpm build
+RUN npm run build
 
-# Remove dev dependencies after build
-RUN pnpm prune --prod
+RUN npm prune --production
 
 EXPOSE 3000
 
-CMD ["pnpm", "start:worker"]
+CMD ["npm", "run", "start:worker"]

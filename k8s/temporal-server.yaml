@@ -21,9 +21,21 @@ spec:
         - containerPort: 8233
         env:
         - name: DB
-          value: "default"
-        - name: DYNAMIC_CONFIG_FILE_PATH
-          value: "config/dynamicconfig/development-sql.yaml"
+          value: "postgres"
+        - name: DB_PORT
+          value: "5432"
+        - name: POSTGRES_SEEDS
+          value: "postgres.temporal-workflow.svc.cluster.local"
+        - name: POSTGRES_USER
+          value: "temporal"
+        - name: POSTGRES_PWD
+          value: "temporal"
+        - name: POSTGRES_DB
+          value: "temporal"
+        - name: ENABLE_ES
+          value: "false"
+        - name: SKIP_SCHEMA_SETUP
+          value: "false"
         resources:
           limits:
             memory: "1Gi"
@@ -31,6 +43,16 @@ spec:
           requests:
             memory: "512Mi"
             cpu: "250m"
+        readinessProbe:
+          tcpSocket:
+            port: 7233
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        livenessProbe:
+          tcpSocket:
+            port: 7233
+          initialDelaySeconds: 60
+          periodSeconds: 30
 ---
 apiVersion: v1
 kind: Service
