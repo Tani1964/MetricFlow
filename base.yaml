@@ -1,0 +1,31 @@
+# base.yaml
+persistence:
+  default:
+    sql:
+      user: temporal
+      password: temporal
+      databaseName: temporal
+      connectAddr: postgres:5432
+      maxConns: 20
+      maxIdleConns: 20
+      maxConnLifetime: "1h"
+
+  visibility:
+    sql:
+      user: temporal
+      password: temporal
+      databaseName: temporal_visibility
+      connectAddr: postgres:5432
+      maxConns: 20
+      maxIdleConns: 20
+      maxConnLifetime: "1h"
+
+publicClient:
+  hostPort: "0.0.0.0:7233"
+
+frontend:
+  bindOn: "0.0.0.0:7233"
+
+dynamicConfig:
+  # Disable dynamic config since we don't have the file
+  pollInterval: "0s"

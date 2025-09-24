@@ -7,8 +7,13 @@ import { activeWorkflows, workflowExecutions, workflowRetries } from "./metrics"
 
 export const runWorker = async () => {
   try {
+    // Use temporal:7233 when running in Docker, localhost:7233 when running locally
+    // const temporalAddress = process.env.TEMPORAL_ADDRESS || "temporal:7233";
+    const temporalAddress = "localhost:7233";
+    console.log(`Connecting to Temporal at: ${temporalAddress}`);
+    
     const connection = await NativeConnection.connect({
-      address: process.env.TEMPORAL_ADDRESS || "localhost:7233",
+      address: temporalAddress,
     });
     
     const worker = await Worker.create({
@@ -35,6 +40,8 @@ export const runWorker = async () => {
     });
 
     console.log("Temporal worker is starting...");
+    console.log("Worker connected successfully to Temporal server");
+    
     activeWorkflows.inc({ workflow_type: 'fetchTransformSaveWorkflow' });
     await worker.run();
   } catch (error) {

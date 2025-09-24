@@ -1,25 +1,94 @@
 version: '3.8'
 
 services:
+  postgres:
+    image: postgres:13
+    environment:
+      POSTGRES_USER: temporal
+      POSTGRES_PASSWORD: temporal
+      POSTGRES_DB: temporal
+    ports:
+      - "5432:5432"
+    volumes:
+      - temporal-postgres-data:/var/lib/postgresql/data
+   
+
   temporal:
+    container_name: temporal
     image: temporalio/auto-setup:1.22.0
+    restart: always
     ports:
       - "7233:7233"
-      - "8233:8233"
     environment:
-      - DB=default
-      - DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development-sql.yaml
-    volumes:
-      - temporal-data:/etc/temporal/config/dynamicconfig
-
+      - DB=postgresql
+      - DB_PORT=5432
+      - POSTGRES_USER=temporal
+      - POSTGRES_PWD=temporal
+      - POSTGRES_SEEDS=postgres
+    depends_on:
+      - postgres
+    # volumes:
+    #   # - ./certs:/etc/temporal/certs
+    #   - ./base.yaml
+    #   - ./config/dynamicconfig/development.yaml
+   
+  
   temporal-ui:
+    container_name: temporal-ui
     image: temporalio/ui:2.21.3
+    restart: always
     ports:
       - "8080:8080"
     environment:
       - TEMPORAL_ADDRESS=temporal:7233
     depends_on:
       - temporal
+    # volumes:
+    #   - ./ui.yaml:/etc/temporal/config/development.yaml
+    #   - ./certs:/etc/temporal/certs
+
+  # Add your worker service
+  worker:
+    build: .
+    environment:
+      - TEMPORAL_ADDRESS=temporal:7233
+      # - NODE_ENV=development
+    depends_on:
+      - temporal
+    volumes:
+      - ./src:/app/src  # Mount source for development
+      - ./dist:/app/dist
+    restart: unless-stopped
+
+
+  client:
+    build: .
+    environment:
+      - TEMPORAL_ADDRESS=temporal:7233
+      # - NODE_ENV=development
+    depends_on:
+      - temporal
+    volumes:
+      - ./src:/app/src  # Mount source for development
+      - ./dist:/app/dist
+    restart: unless-stopped
+    command: ["npm", "run", "start:client"]
+    # command: ["npm", "run", "dev:client"]
+
+  metricsServer:
+    build: .
+    environment:
+      - TEMPORAL_ADDRESS=temporal:7233
+      # - NODE_ENV=development
+    depends_on:
+      - temporal
+    volumes:
+      - ./src:/app/src  # Mount source for development
+      - ./dist:/app/dist
+    restart: unless-stopped
+    command: ["npm", "run", "start"]
+
+  
 
   prometheus:
     image: prom/prometheus:latest
@@ -34,17 +103,8 @@ services:
       - '--web.console.templates=/etc/prometheus/consoles'
       - '--web.enable-lifecycle'
 
-  grafana:
-    image: grafana/grafana:latest
-    ports:
-      - "3001:3000"
-    environment:
-      - GF_SECURITY_ADMIN_PASSWORD=admin
-    volumes:
-      - grafana-storage:/var/lib/grafana
-      - ./grafana/dashboards:/etc/grafana/provisioning/dashboards
-      - ./grafana/datasources:/etc/grafana/provisioning/datasources
+  
 
 volumes:
-  temporal-data:
-  grafana-storage:
+  temporal-postgres-data:
+
