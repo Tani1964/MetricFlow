@@ -1,8 +1,13 @@
 import express from "express";
-import { register } from "./metrics";
+// import { client } from "./metrics";
+import client from "prom-client";
 
 const app = express();
 const port = 3000;
+app.use(express.json());
+
+const collectDefaultMetrics = client.collectDefaultMetrics;
+collectDefaultMetrics({ register: client.register });
 
 async function main() {
   try {
@@ -22,8 +27,34 @@ async function main() {
     });
 
     app.get("/metrics", async (req, res) => {
-      res.setHeader("Content-Type", register.contentType);
-      res.end(await register.metrics());
+      res.setHeader("Content-Type", client.register.contentType);
+      res.end(await client.register.metrics());
+    });
+
+    // Sharded Data Service
+    app.post("/store", async (req, res) => {
+      try {
+        console.log(req.body);
+        const { userId, data } = req.body;
+        if (!userId || !data) {
+          return res
+            .status(400)
+            .json({ error: "Missing userId or data in request body" });
+        }
+
+        // Simulate sharding logic
+        const shardId = userId % 4; // Example: 4 shards
+        console.log(`Storing data for user ${userId} in shard ${shardId}`);
+
+        // Add this response
+        res.status(200).json({
+          message: "Data stored successfully",
+          shardId: shardId,
+        });
+      } catch (error) {
+        console.error("Error in /store endpoint:", error);
+        res.status(500).json({ error: "Internal Server Error" });
+      }
     });
 
     app.listen(port, "0.0.0.0", () => {

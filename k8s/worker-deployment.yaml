@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: temporal-worker
-  namespace: temporal-workflow
+  namespace: newwave
 spec:
   replicas: 2
   selector:
@@ -15,7 +15,8 @@ spec:
     spec:
       containers:
       - name: worker
-        image: temporal-workflow:latest
+        image: newwave_worker:latest
+        imagePullPolicy: Never 
         command: ["npm","run", "start:worker"]
         env:
         - name: TEMPORAL_ADDRESS

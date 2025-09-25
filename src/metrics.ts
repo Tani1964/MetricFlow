@@ -1,4 +1,5 @@
-import { Counter, Gauge, Histogram, collectDefaultMetrics, register } from 'prom-client';
+import client, { Counter, Gauge, Histogram, collectDefaultMetrics } from "prom-client";
+import { SaveActivity } from './activities/types';
 
 // Collect default metrics
 collectDefaultMetrics({ prefix: 'temporal_app_' });
@@ -68,4 +69,16 @@ export const dataStorageOperations = new Counter({
   labelNames: ['operation', 'status'],
 });
 
-export { register };
+export const shardRequestCount = new Counter({
+  name: 'temporal_shard_request_count_total',
+  help: 'Total number of requests handled by each shard',
+  labelNames: ['shard_id', 'status'],
+});
+
+export const shardDistribution = new Gauge({
+  name: 'temporal_shard_distribution',
+  help: 'Current distribution of data across shards',
+  labelNames: ['shard_id'],
+});
+
+export { client };

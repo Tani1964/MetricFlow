@@ -25,27 +25,51 @@ services:
       - POSTGRES_USER=temporal
       - POSTGRES_PWD=temporal
       - POSTGRES_SEEDS=postgres
+      - TEMPORAL_ADDRESS=temporal:7233
+      # - DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development-sql.yaml
+      - TEMPORAL_CLI_ADDRESS=temporal:7233
     depends_on:
       - postgres
     # volumes:
+      # - ./dynamicconfig:/etc/temporal/config/dynamicconfig
     #   # - ./certs:/etc/temporal/certs
     #   - ./base.yaml
     #   - ./config/dynamicconfig/development.yaml
-   
+  temporal-admin-tools:
+    container_name: temporal-admin-tools
+    depends_on:
+      - temporal
+    environment:
+      - TEMPORAL_ADDRESS=temporal:7233
+      - TEMPORAL_CLI_ADDRESS=temporal:7233
+      - BIND_ON_IP=0.0.0.0
+      - FRONTEND_ADDRESS=0.0.0.0:7233
+      - HISTORY_ADDRESS=0.0.0.0:7234
+      - MATCHING_ADDRESS=0.0.0.0:7235
+      - WORKER_ADDRESS=0.0.0.0:7239
+      # - TEMPORAL_CLI_ADDRESS=temporal:7233
+      # - TEMPORAL_ADDRESS=temporal:7233
+    image: temporalio/admin-tools:latest
+    stdin_open: true
+    tty: true
   
   temporal-ui:
     container_name: temporal-ui
-    image: temporalio/ui:2.21.3
+    image: temporalio/ui:latest
     restart: always
     ports:
-      - "8080:8080"
+      - "8088:8080"
     environment:
+      # - TEMPORAL_GRPC_ENDPOINT=temporal:7233
+      # - TEMPORAL_WEB_PORT=8088
       - TEMPORAL_ADDRESS=temporal:7233
+      - TEMPORAL_CORS_ORIGINS=http://localhost:8088
     depends_on:
       - temporal
     # volumes:
     #   - ./ui.yaml:/etc/temporal/config/development.yaml
     #   - ./certs:/etc/temporal/certs
+    # command: ["sh", "-c", "echo 'application/javascript js' >> /etc/mime.types && ./start-ui-server.sh"]
 
   # Add your worker service
   worker:
@@ -75,11 +99,13 @@ services:
     command: ["npm", "run", "start:client"]
     # command: ["npm", "run", "dev:client"]
 
-  metricsServer:
+  metrics-server:
     build: .
     environment:
       - TEMPORAL_ADDRESS=temporal:7233
       # - NODE_ENV=development
+    ports: 
+      - "3000:3000"  
     depends_on:
       - temporal
     volumes:
@@ -87,6 +113,20 @@ services:
       - ./dist:/app/dist
     restart: unless-stopped
     command: ["npm", "run", "start"]
+
+  shard-demo:
+    build: .
+    environment:
+      - SERVER_HOST=metrics-server:3000
+      # - NODE_ENV=development
+    depends_on:
+      - temporal
+    volumes:
+      - ./src:/app/src  # Mount source for development
+      - ./dist:/app/dist
+    restart: unless-stopped
+    command: ["npm", "run", "start:shard-demo"]
+    # command: ["npm", "run", "dev:shard-demo"]
 
   
 

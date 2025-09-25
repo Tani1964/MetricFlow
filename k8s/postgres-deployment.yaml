@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: postgres
-  namespace: temporal-workflow
+  namespace: newwave
 spec:
   replicas: 1
   selector:
@@ -15,7 +15,9 @@ spec:
     spec:
       containers:
       - name: postgres
+        # image: postgres:13
         image: postgres:13
+        # image: quay.io/postgres/postgres:13-alpine
         env:
         - name: POSTGRES_DB
           value: "temporal"
@@ -61,7 +63,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: postgres
-  namespace: temporal-workflow
+  namespace: newwave
 spec:
   selector:
     app: postgres
