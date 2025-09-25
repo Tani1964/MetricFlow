@@ -7,12 +7,42 @@ data:
   prometheus.yml: |
     global:
       scrape_interval: 15s
+      evaluation_interval: 15s
+    
     scrape_configs:
-    - job_name: 'newwave'
+    - job_name: 'temporal-api-server'
       static_configs:
       - targets: ['temporal-api-server:80']
       metrics_path: '/metrics'
       scrape_interval: 10s
+      scrape_timeout: 5s
+    
+    - job_name: 'temporal-worker'
+      static_configs:
+      - targets: ['temporal-worker:9464']
+      metrics_path: '/metrics'
+      scrape_interval: 10s
+      scrape_timeout: 5s
+      # Optional: Add labels to identify worker metrics
+      relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'temporal-worker'
+    
+    - job_name: 'temporal-server'
+      static_configs:
+      - targets: ['temporal-server:7233']
+      metrics_path: '/metrics'
+      scrape_interval: 15s
+      scrape_timeout: 5s
+    
+    # If you have other services that expose metrics
+    - job_name: 'temporal-client'
+      static_configs:
+      - targets: ['temporal-client:3001']
+      metrics_path: '/metrics'
+      scrape_interval: 15s
+      scrape_timeout: 5s
 
 ---
 apiVersion: apps/v1
@@ -33,12 +63,20 @@ spec:
       containers:
       - name: prometheus
         image: prom/prometheus:latest
-        # image: quay.io/prometheus/prometheus:latest
         ports:
         - containerPort: 9090
+        args:
+        - '--config.file=/etc/prometheus/prometheus.yml'
+        - '--storage.tsdb.path=/prometheus'
+        - '--web.console.libraries=/etc/prometheus/console_libraries'
+        - '--web.console.templates=/etc/prometheus/consoles'
+        - '--storage.tsdb.retention.time=15d'
+        - '--web.enable-lifecycle'
         volumeMounts:
         - name: prometheus-config
           mountPath: /etc/prometheus
+        - name: prometheus-storage
+          mountPath: /prometheus
         resources:
           limits:
             memory: "512Mi"
@@ -46,10 +84,25 @@ spec:
           requests:
             memory: "256Mi"
             cpu: "125m"
+        # Health checks for Prometheus
+        livenessProbe:
+          httpGet:
+            path: /-/healthy
+            port: 9090
+          initialDelaySeconds: 30
+          periodSeconds: 15
+        readinessProbe:
+          httpGet:
+            path: /-/ready
+            port: 9090
+          initialDelaySeconds: 5
+          periodSeconds: 5
       volumes:
       - name: prometheus-config
         configMap:
           name: prometheus-config
+      - name: prometheus-storage
+        emptyDir: {}
 
 ---
 apiVersion: v1

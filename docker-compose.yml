@@ -79,10 +79,13 @@ services:
       # - NODE_ENV=development
     depends_on:
       - temporal
+    ports: 
+      - "9464:9464"  
     volumes:
       - ./src:/app/src  # Mount source for development
       - ./dist:/app/dist
     restart: unless-stopped
+    command: ["npm", "run", "start:worker"]
 
 
   client:
@@ -90,6 +93,8 @@ services:
     environment:
       - TEMPORAL_ADDRESS=temporal:7233
       # - NODE_ENV=development
+    ports: 
+      - "3001:3001"  
     depends_on:
       - temporal
     volumes:

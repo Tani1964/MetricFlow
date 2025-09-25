@@ -7,18 +7,27 @@ scrape_configs:
     static_configs:
       - targets: ['localhost:9090']
 
-  - job_name: 'temporal-workflow'
+  - job_name: 'temporal-workflow-api'
     static_configs:
-      - targets: ['metrics-server:3000']
+      - targets: ['metrics-server:3000']   # index.ts server
     metrics_path: '/metrics'
     scrape_interval: 1s
 
-  - job_name: 'temporal-server'
+  - job_name: 'temporal-worker'
     static_configs:
-      - targets: ['temporal:7233']
+      - targets: ['worker:9464']   # worker.ts server
     metrics_path: '/metrics'
-    scrape_interval: 4s
+    scrape_interval: 1s
 
+  - job_name: 'temporal-client'
+    static_configs:
+      - targets: ['client:3001']   # client.ts server
+    metrics_path: '/metrics'
+    scrape_interval: 1s
 
-
-    
+  # Uncomment only if Temporal server itself exposes metrics on a proper HTTP port
+  # - job_name: 'temporal-server'
+  #   static_configs:
+  #     - targets: ['temporal:8080']   # check your temporal config
+  #   metrics_path: '/metrics'
+  #   scrape_interval: 4s
