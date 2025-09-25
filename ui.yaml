@@ -1,0 +1,6 @@
+tls:
+  caFile: /etc/temporal/certs/rootCA.pem
+  certFile: /etc/temporal/certs/client.crt
+  keyFile: /etc/temporal/certs/client.key
+  enableHostVerification: false
+  serverName: temporal

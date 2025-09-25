@@ -1,72 +1,84 @@
-import { Client, Connection } from "@temporalio/client";
 import express from "express";
-import { runWorker } from "./worker";
+import client from "prom-client";
+import {
+  dataProcessedRecords,
+  dataStorageOperations,
+  shardDistribution,
+  shardRequestCount,
+} from "./metrics";
 
 const app = express();
 const port = 3000;
+app.use(express.json());
 
-let temporalAvailable = false;
+// Default metrics
+const collectDefaultMetrics = client.collectDefaultMetrics;
+collectDefaultMetrics({ register: client.register });
 
 async function main() {
   try {
-    if (process.env.DISABLE_WORKER !== "true") {
-      runWorker()
-        .then(() => {
-          temporalAvailable = true;
-          console.log("Worker started successfully");
-        })
-        .catch(err => {
-          console.error("Worker error (continuing without Temporal):", err);
-          temporalAvailable = false;
-        });
-    } else {
-      console.log("Worker disabled via DISABLE_WORKER environment variable");
-    }
-
+    // Health + Info
     app.get("/", (req, res) => {
-      res.json({ 
+      res.json({
         message: "MetricFlow API is running",
-        temporalAvailable: temporalAvailable
+        service: "server",
       });
     });
 
     app.get("/health", (req, res) => {
-      res.json({ 
-        status: "healthy", 
-        service: "metricflow",
-        temporalWorker: temporalAvailable ? "connected" : "disconnected"
+      res.json({
+        status: "healthy",
+        service: "metricflow-server",
+        timestamp: new Date().toISOString(),
       });
     });
 
-    app.post("/start-workflow", async (req, res) => {
-      if (!temporalAvailable) {
-        return res.status(503).json({ 
-          error: "Temporal service not available. Worker is not connected." 
-        });
-      }
+    // Prometheus scrape endpoint
+    app.get("/metrics", async (req, res) => {
+      res.setHeader("Content-Type", client.register.contentType);
+      res.end(await client.register.metrics());
+    });
 
+    // Sharded Data Service
+    app.post("/store", async (req, res) => {
       try {
-        const connection = await Connection.connect({
-          address: process.env.TEMPORAL_ADDRESS || "temporal:7233",
+        const { userId, data } = req.body;
+        if (!userId || !data) {
+          return res
+            .status(400)
+            .json({ error: "Missing userId or data in request body" });
+        }
+
+        // Example sharding: 4 shards
+        const shardId = userId % 4;
+        console.log(`Storing data for user ${userId} in shard ${shardId}`);
+
+        // 🔹 Update metrics
+        shardRequestCount.inc({ shard_id: String(shardId), status: "success" });
+        shardDistribution.set({ shard_id: String(shardId) }, userId); // simplistic example
+
+        dataStorageOperations.inc({ operation: "insert", status: "success" });
+        dataProcessedRecords.inc({ source: "store-api", status: "processed" });
+
+        res.status(200).json({
+          message: "Data stored successfully",
+          shardId: shardId,
         });
-        const client = new Client({ connection });
-        const handle = await client.workflow.start("fetchTransformSaveWorkflow", {
-          taskQueue: "demo-task-queue",
-          workflowId: "workflow-" + Date.now(),
-        });
-        console.log(`Started workflow ${handle.workflowId}`);
-        await connection.close();
-        res.json({ message: "Workflow started", workflowId: handle.workflowId });
       } catch (error) {
-        console.error("Failed to start workflow:", error);
-        res.status(500).json({ error: "Failed to start workflow" });
+        console.error("Error in /store endpoint:", error);
+
+        // 🔹 Error metrics
+        shardRequestCount.inc({ shard_id: "unknown", status: "failed" });
+        dataStorageOperations.inc({ operation: "insert", status: "failed" });
+
+        res.status(500).json({ error: "Internal Server Error" });
       }
     });
 
+    // Start server
     app.listen(port, "0.0.0.0", () => {
       console.log(`Server running at http://0.0.0.0:${port}`);
     });
-
   } catch (error) {
     console.error("Server failed to start:", error);
     process.exit(1);

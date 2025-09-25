@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: temporal-api-server
+  namespace: newwave
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: temporal-api-server
+  template:
+    metadata:
+      labels:
+        app: temporal-api-server
+    spec:
+      containers:
+      - name: api-server
+        image: newwave_metrics-server:latest
+        imagePullPolicy: Never  # Add this line
+        command: ["npm", "run", "start:server"]
+        ports:
+        - containerPort: 3000
+        env:
+        - name: TEMPORAL_ADDRESS
+          value: "temporal-server:7233"
+        - name: TEMPORAL_NAMESPACE
+          value: "default"
+        - name: PORT
+          value: "3000"
+        resources:
+          limits:
+            memory: "256Mi"
+            cpu: "250m"
+          requests:
+            memory: "128Mi"
+            cpu: "125m"
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 10
+          periodSeconds: 5
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: temporal-api-server
+  namespace: newwave
+spec:
+  selector:
+    app: temporal-api-server
+  ports:
+  - name: http
+    port: 80
+    targetPort: 3000
+  type: LoadBalancer

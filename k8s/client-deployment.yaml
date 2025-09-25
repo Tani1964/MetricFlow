@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: temporal-client
+  namespace: newwave
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: temporal-client
+  template:
+    metadata:
+      labels:
+        app: temporal-client
+    spec:
+      containers:
+      - name: client
+        image: newwave_client:latest
+        imagePullPolicy: Never
+        command: ["npm", "run", "start:client"]
+        env:
+        - name: TEMPORAL_ADDRESS
+          value: "temporal-server:7233"
+        - name: TEMPORAL_NAMESPACE
+          value: "default"
+        ports:
+        - name: http
+          containerPort: 3001
+        resources:
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+        livenessProbe:
+          httpGet:
+            path: /metrics
+            port: 3001
+          initialDelaySeconds: 30
+          periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: temporal-client
+  namespace: newwave
+spec:
+  selector:
+    app: temporal-client
+  ports:
+  - name: http
+    port: 80
+    targetPort: 3001
+  type: LoadBalancer   # 👈 makes it public

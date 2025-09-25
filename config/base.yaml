@@ -1,0 +1,34 @@
+global:
+  tls:
+    internode:
+      server:
+        certFile: /etc/temporal/certs/server.crt
+        keyFile: /etc/temporal/certs/server.key
+        requireClientAuth: true
+        clientCaFiles:
+          - /etc/temporal/certs/rootCA.pem
+      client:
+        serverName: temporal
+        rootCaFiles:
+          - /etc/temporal/certs/rootCA.pem
+    frontend:
+      server:
+        certFile: /etc/temporal/certs/server.crt
+        keyFile: /etc/temporal/certs/server.key
+        requireClientAuth: true
+        clientCaFiles:
+          - /etc/temporal/certs/rootCA.pem
+        rootCaFiles:
+          - /etc/temporal/certs/rootCA.pem
+      client:
+        serverName: temporal
+        rootCaFiles:
+          - /etc/temporal/certs/rootCA.pem
+
+services:
+  history:
+  matching:
+  worker:
+
+log:
+  level: debug

@@ -1,0 +1,66 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: temporal-worker
+  namespace: newwave
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: temporal-worker
+  template:
+    metadata:
+      labels:
+        app: temporal-worker
+    spec:
+      containers:
+      - name: worker
+        image: newwave_worker:latest
+        imagePullPolicy: Never
+        command: ["npm", "run", "start:worker"]
+        env:
+        - name: TEMPORAL_ADDRESS
+          value: "temporal-server:7233"
+        - name: TEMPORAL_NAMESPACE
+          value: "default"
+        ports:
+        - name: metrics
+          containerPort: 9464
+        resources:
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+        # Remove liveness probe or implement health endpoint
+        # livenessProbe:
+        #   httpGet:
+        #     path: /health
+        #     port: 9464
+        #   initialDelaySeconds: 60
+        #   periodSeconds: 30
+        #   timeoutSeconds: 5
+        #   failureThreshold: 3
+        readinessProbe:
+          exec:
+            command:
+            - sh
+            - -c
+            - "pgrep -f 'node.*worker' || exit 1"
+          initialDelaySeconds: 30
+          periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: temporal-worker
+  namespace: newwave
+spec:
+  selector:
+    app: temporal-worker
+  ports:
+  - name: metrics
+    port: 9464
+    targetPort: 9464
+  type: LoadBalancer

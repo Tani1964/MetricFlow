@@ -1,41 +1,155 @@
 version: '3.8'
 
 services:
+  postgres:
+    image: postgres:13
+    environment:
+      POSTGRES_USER: temporal
+      POSTGRES_PASSWORD: temporal
+      POSTGRES_DB: temporal
+    ports:
+      - "5432:5432"
+    volumes:
+      - temporal-postgres-data:/var/lib/postgresql/data
+   
+
   temporal:
-    image: temporalio/auto-setup:latest
+    container_name: temporal
+    image: temporalio/auto-setup:1.22.0
+    restart: always
     ports:
       - "7233:7233"
     environment:
-      - DB=postgres12
+      - DB=postgresql
       - DB_PORT=5432
       - POSTGRES_USER=temporal
       - POSTGRES_PWD=temporal
-      - POSTGRES_SEEDS=postgresql
+      - POSTGRES_SEEDS=postgres
+      - TEMPORAL_ADDRESS=temporal:7233
+      # - DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development-sql.yaml
+      - TEMPORAL_CLI_ADDRESS=temporal:7233
     depends_on:
-      - postgresql
-
-  postgresql:
-    image: postgres:13
-    environment:
-      POSTGRES_PASSWORD: temporal
-      POSTGRES_USER: temporal
-      POSTGRES_DB: temporal
-
-  app:
-    build: .
-    ports:
-      - "3000:3000"
+      - postgres
+    # volumes:
+      # - ./dynamicconfig:/etc/temporal/config/dynamicconfig
+    #   # - ./certs:/etc/temporal/certs
+    #   - ./base.yaml
+    #   - ./config/dynamicconfig/development.yaml
+  temporal-admin-tools:
+    container_name: temporal-admin-tools
     depends_on:
       - temporal
     environment:
       - TEMPORAL_ADDRESS=temporal:7233
-
-  temporal-web:
-    image: temporalio/web:latest
+      - TEMPORAL_CLI_ADDRESS=temporal:7233
+      - BIND_ON_IP=0.0.0.0
+      - FRONTEND_ADDRESS=0.0.0.0:7233
+      - HISTORY_ADDRESS=0.0.0.0:7234
+      - MATCHING_ADDRESS=0.0.0.0:7235
+      - WORKER_ADDRESS=0.0.0.0:7239
+      # - TEMPORAL_CLI_ADDRESS=temporal:7233
+      # - TEMPORAL_ADDRESS=temporal:7233
+    image: temporalio/admin-tools:latest
+    stdin_open: true
+    tty: true
+  
+  temporal-ui:
+    container_name: temporal-ui
+    image: temporalio/ui:latest
+    restart: always
     ports:
-      - "8233:8080"
+      - "8088:8080"
     environment:
-      - TEMPORAL_GRPC_ENDPOINT=temporal:7233
-      - TEMPORAL_WEB_PORT=8080
+      # - TEMPORAL_GRPC_ENDPOINT=temporal:7233
+      # - TEMPORAL_WEB_PORT=8088
+      - TEMPORAL_ADDRESS=temporal:7233
+      - TEMPORAL_CORS_ORIGINS=http://localhost:8088
     depends_on:
       - temporal
+    # volumes:
+    #   - ./ui.yaml:/etc/temporal/config/development.yaml
+    #   - ./certs:/etc/temporal/certs
+    # command: ["sh", "-c", "echo 'application/javascript js' >> /etc/mime.types && ./start-ui-server.sh"]
+
+  # Add your worker service
+  worker:
+    build: .
+    environment:
+      - TEMPORAL_ADDRESS=temporal:7233
+      # - NODE_ENV=development
+    depends_on:
+      - temporal
+    ports: 
+      - "9464:9464"  
+    volumes:
+      - ./src:/app/src  # Mount source for development
+      - ./dist:/app/dist
+    restart: unless-stopped
+    command: ["npm", "run", "start:worker"]
+
+
+  client:
+    build: .
+    environment:
+      - TEMPORAL_ADDRESS=temporal:7233
+      # - NODE_ENV=development
+    ports: 
+      - "3001:3001"  
+    depends_on:
+      - temporal
+    volumes:
+      - ./src:/app/src  # Mount source for development
+      - ./dist:/app/dist
+    restart: unless-stopped
+    command: ["npm", "run", "start:client"]
+    # command: ["npm", "run", "dev:client"]
+
+  metrics-server:
+    build: .
+    environment:
+      - TEMPORAL_ADDRESS=temporal:7233
+      # - NODE_ENV=development
+    ports: 
+      - "3000:3000"  
+    depends_on:
+      - temporal
+    volumes:
+      - ./src:/app/src  # Mount source for development
+      - ./dist:/app/dist
+    restart: unless-stopped
+    command: ["npm", "run", "start"]
+
+  shard-demo:
+    build: .
+    environment:
+      - SERVER_HOST=metrics-server:3000
+      # - NODE_ENV=development
+    depends_on:
+      - temporal
+    volumes:
+      - ./src:/app/src  # Mount source for development
+      - ./dist:/app/dist
+    restart: unless-stopped
+    command: ["npm", "run", "start:shard-demo"]
+    # command: ["npm", "run", "dev:shard-demo"]
+
+  
+
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+
+  
+
+volumes:
+  temporal-postgres-data:
+
